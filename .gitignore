@@ -1,0 +1,70 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.so.*
+*.dylib
+*.o
+*.a
+*.out
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.out
+
+# Go workspace file
+go.work
+
+# Go mod cache
+go.sum.lock
+
+# Dependency directories
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+.env.local
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+app.log
+
+# Configuration (if local)
+config/configs.local.yaml
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS-specific
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.vscode/launch.json
+
+# Build output
+dist/
+build/
+bin/
+
+# Development
+*.pem
+*.key
+*.crt

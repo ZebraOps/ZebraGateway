@@ -1,0 +1,57 @@
+app:
+  Port: "8080"
+  # 与 ZebraRBAC SECRET_KEY 保持一致，生产环境通过环境变量 ZEBRA_GW_APP_JWTSECRET 注入
+  JWTSecret: "Zu+1MV0HDNrXYGsGupBTUfAxHWfSfZ4xhLbc4fDALI8="
+  # ZebraRBAC 服务地址
+  RbacURL: "http://192.168.10.149:8000"
+  # 权限缓存 TTL（秒），设为 0 可禁用缓存
+  CacheTTL: 300
+  # 动态路由持久化存储（PostgreSQL DSN）
+  DatabaseURL: "postgres://zebra:pass123@192.168.41.54:5432/zebra_gateway?sslmode=disable"
+  # 路由自动重载间隔（支持 s/m/h 单位）
+  RouteReloadInterval: "30s"
+
+# 后端服务路由表
+# prefix  : 网关对外暴露的路径前缀
+# target  : 后端服务根地址
+# rewrite : strip prefix 后插入的路径前缀（空字符串表示不改写）
+#
+# 示例转发规则：
+#   /rbac/login/access-token -> http://localhost:8000/api/login/access-token
+services:
+  - prefix: "/rbac"
+    target: "http://192.168.10.149:8000"
+    rewrite: ""
+
+# 白名单路由：不需要 JWT 认证即可访问
+# method 支持 * 通配符
+# path  支持前缀通配：以 /* 结尾表示匹配该前缀下所有子路径
+whitelist:
+  - method: "POST"
+    path: "/rbac/login/access-token"
+  - method: "POST"
+    path: "/rbac/login/swagger-token"
+  - method: "GET"
+    path: "/health"
+  # Swagger UI 及相关资源，无需鉴权
+  - method: "GET"
+    path: "/swagger/*"
+  # 用户获取自身权限和动态路由（RBAC 侧有 JWT 保护）
+  - method: "GET"
+    path: "/rbac/authorization"
+  - method: "GET"
+    path: "/rbac/route/getUserRoutes"
+
+logging:
+  level: "debug"
+  encoding: "json"
+  output_paths:
+    - "stdout"
+    - "./logs/app.log"
+  error_output_paths:
+    - "stderr"
+    - "./logs/error.log"
+  max_size: 100 # MB，单个日志文件最大尺寸
+  max_age: 30 # days，日志文件保留天数
+  max_backups: 10 # 保留的旧日志文件数量
+  compress: true

@@ -1,0 +1,701 @@
+basePath: /
+definitions:
+  api.HealthResponse:
+    properties:
+      service:
+        example: ZebraGateway
+        type: string
+      status:
+        example: ok
+        type: string
+    type: object
+  api.LoginRequest:
+    properties:
+      password:
+        example: password
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  api.TokenData:
+    properties:
+      refreshToken:
+        example: eyJhbGci...
+        type: string
+      token:
+        example: eyJhbGci...
+        type: string
+    type: object
+  handler.createRouteInput:
+    properties:
+      description:
+        description: Description 路由描述
+        example: ZebraRBAC 权限服务
+        type: string
+      enabled:
+        description: Enabled 是否启用，默认 true
+        example: true
+        type: boolean
+      prefix:
+        description: Prefix 网关对外暴露的路径前缀，如 /rbac（必填，全局唯一）
+        example: /rbac
+        type: string
+      rewrite:
+        description: Rewrite strip Prefix 后插入的路径前缀，空字符串表示不改写
+        example: ""
+        type: string
+      target:
+        description: Target 后端服务根地址，如 http://192.168.30.198:8000（必填）
+        example: http://192.168.30.198:8000
+        type: string
+    required:
+    - prefix
+    - target
+    type: object
+  handler.createWhitelistInput:
+    properties:
+      description:
+        description: Description 描述
+        example: 登录接口，无需鉴权
+        type: string
+      method:
+        description: Method HTTP 方法，* 表示任意方法（必填）
+        example: POST
+        type: string
+      path:
+        description: Path 完整请求路径或 /* 结尾的前缀通配（必填）
+        example: /rbac/login/access-token
+        type: string
+    required:
+    - method
+    - path
+    type: object
+  handler.swaggerServiceRoute:
+    properties:
+      CreatedAt:
+        example: "2026-03-23T23:05:00.567525+08:00"
+        type: string
+      DeletedAt:
+        example: "null"
+        type: string
+      ID:
+        example: 1
+        type: integer
+      UpdatedAt:
+        example: "2026-03-23T23:05:00.567525+08:00"
+        type: string
+      description:
+        example: ZebraRBAC 权限服务
+        type: string
+      enabled:
+        example: true
+        type: boolean
+      prefix:
+        example: /rbac
+        type: string
+      rewrite:
+        example: ""
+        type: string
+      target:
+        example: http://192.168.30.198:8000
+        type: string
+    type: object
+  handler.swaggerWhitelistRoute:
+    properties:
+      CreatedAt:
+        example: "2026-03-23T23:05:00.567525+08:00"
+        type: string
+      DeletedAt:
+        example: "null"
+        type: string
+      ID:
+        example: 1
+        type: integer
+      UpdatedAt:
+        example: "2026-03-23T23:05:00.567525+08:00"
+        type: string
+      description:
+        example: 登录接口，无需鉴权
+        type: string
+      method:
+        example: POST
+        type: string
+      path:
+        example: /rbac/login/access-token
+        type: string
+    type: object
+  handler.updateRouteInput:
+    properties:
+      description:
+        description: Description 描述（为空则不更新）
+        example: ZebraRBAC 权限服务
+        type: string
+      enabled:
+        description: Enabled 启用状态
+        example: true
+        type: boolean
+      prefix:
+        description: Prefix 路径前缀（为空则不更新）
+        example: /rbac
+        type: string
+      rewrite:
+        description: Rewrite 重写前缀
+        example: ""
+        type: string
+      target:
+        description: Target 目标地址（为空则不更新）
+        example: http://192.168.30.198:8000
+        type: string
+    type: object
+  types.RBACAuthData:
+    properties:
+      avatar:
+        type: string
+      email:
+        type: string
+      menus:
+        $ref: '#/definitions/types.RBACMenus'
+      nickName:
+        type: string
+      permissions:
+        $ref: '#/definitions/types.RBACPermissions'
+      userId: {}
+      userName:
+        type: string
+    type: object
+  types.RBACMenus:
+    properties:
+      all:
+        type: boolean
+      data:
+        additionalProperties:
+          type: boolean
+        type: object
+    type: object
+  types.RBACPermissions:
+    properties:
+      all:
+        type: boolean
+      components:
+        additionalProperties:
+          type: boolean
+        type: object
+      functions:
+        items:
+          type: string
+        type: array
+    type: object
+  types.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      message:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: '基于 Gin 的轻量级 API 网关，对接 ZebraRBAC 实现网关层权限校验。\n\n## 鉴权说明\n\n除白名单接口外，所有接口需在请求头中携带
+    JWT Token：\n```\nAuthorization: Bearer <token>\n```\n\nToken 通过 `POST /rbac/login/access-token`
+    获取。'
+  title: ZebraGateway API
+  version: 1.0.0
+paths:
+  /admin/routes:
+    get:
+      description: 返回所有服务路由，支持按路径前缀（模糊匹配）、目标地址（模糊匹配）、启用状态过滤
+      parameters:
+      - description: 路径前缀（模糊匹配，如 /rbac）
+        in: query
+        name: prefix
+        type: string
+      - description: 目标地址（模糊匹配，如 192.168）
+        in: query
+        name: target
+        type: string
+      - description: 是否启用（true 或 false）
+        enum:
+        - "true"
+        - "false"
+        in: query
+        name: enabled
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 路由列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/handler.swaggerServiceRoute'
+                  type: array
+              type: object
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 列出所有服务路由
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: 新增一条服务路由，网关将匹配到 prefix 的请求反向代理到 target。创建后自动热重载生效
+      parameters:
+      - description: 路由信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createRouteInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建的路由
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.swaggerServiceRoute'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/types.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 新增服务路由
+      tags:
+      - admin
+  /admin/routes/{id}:
+    delete:
+      description: 按 ID 删除服务路由，删除后自动热重载生效
+      parameters:
+      - description: 路由 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/types.Response'
+        "400":
+          description: ID 无效
+          schema:
+            $ref: '#/definitions/types.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除服务路由
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      description: 按 ID 更新路由的前缀、目标地址、重写规则、描述或启用状态。更新后自动热重载生效
+      parameters:
+      - description: 路由 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 路由更新信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateRouteInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新后的路由
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.swaggerServiceRoute'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/types.Response'
+        "404":
+          description: 路由不存在
+          schema:
+            $ref: '#/definitions/types.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新服务路由
+      tags:
+      - admin
+  /admin/routes/{id}/disable:
+    post:
+      description: 将指定路由的 enabled 字段设为 false，热重载后立即停止转发
+      parameters:
+      - description: 路由 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 操作成功
+          schema:
+            $ref: '#/definitions/types.Response'
+        "400":
+          description: ID 无效
+          schema:
+            $ref: '#/definitions/types.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 禁用服务路由
+      tags:
+      - admin
+  /admin/routes/{id}/enable:
+    post:
+      description: 将指定路由的 enabled 字段设为 true，热重载后立即生效
+      parameters:
+      - description: 路由 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 操作成功
+          schema:
+            $ref: '#/definitions/types.Response'
+        "400":
+          description: ID 无效
+          schema:
+            $ref: '#/definitions/types.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 启用服务路由
+      tags:
+      - admin
+  /admin/routes/reload:
+    post:
+      description: 从数据库重新加载所有启用的服务路由和白名单，无需重启进程即可生效
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 重载成功
+          schema:
+            $ref: '#/definitions/types.Response'
+        "500":
+          description: 重载失败
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 手动触发路由热重载
+      tags:
+      - admin
+  /admin/whitelists:
+    get:
+      description: 返回所有白名单路由，支持按 HTTP 方法（精确匹配）和路径（模糊匹配）过滤
+      parameters:
+      - description: HTTP 方法（精确匹配，如 GET、POST、*）
+        enum:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - PATCH
+        - '*'
+        in: query
+        name: method
+        type: string
+      - description: 路径（模糊匹配，如 /rbac）
+        in: query
+        name: path
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 白名单列表
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/handler.swaggerWhitelistRoute'
+                  type: array
+              type: object
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 列出所有白名单
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: 新增一条白名单路由，匹配到该方法+路径的请求将绕过 JWT 鉴权。创建后自动热重载生效
+      parameters:
+      - description: 白名单条目
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.createWhitelistInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建的白名单条目
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.swaggerWhitelistRoute'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/types.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 新增白名单条目
+      tags:
+      - admin
+  /admin/whitelists/{id}:
+    delete:
+      description: 按 ID 删除白名单条目，删除后该路径将重新受 JWT 鉴权保护。自动热重载生效
+      parameters:
+      - description: 白名单 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/types.Response'
+        "400":
+          description: ID 无效
+          schema:
+            $ref: '#/definitions/types.Response'
+        "500":
+          description: 服务器错误
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除白名单条目
+      tags:
+      - admin
+  /health:
+    get:
+      description: 检查网关服务是否正常运行
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 服务正常
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/api.HealthResponse'
+              type: object
+      summary: 健康检查
+      tags:
+      - Gateway
+  /rbac/authorization:
+    get:
+      description: 返回当前登录用户的角色、菜单路径、功能点、组件权限等完整权限数据，由网关转发到 ZebraRBAC `/api/authorization`
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 权限信息
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/types.RBACAuthData'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户权限
+      tags:
+      - RBAC
+  /rbac/login/access-token:
+    post:
+      consumes:
+      - application/json
+      description: 通过用户名和密码获取 JWT access token 与 refresh token。请求由网关直接转发到 ZebraRBAC，**无需鉴权**。
+      parameters:
+      - description: 登录信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/api.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/types.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/api.TokenData'
+              type: object
+        "400":
+          description: 用户名或密码错误
+          schema:
+            $ref: '#/definitions/types.Response'
+      summary: 用户登录
+      tags:
+      - Auth
+  /rbac/menus:
+    get:
+      description: 获取 RBAC 系统菜单，由网关转发到 ZebraRBAC `/api/menus`
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 菜单列表
+          schema:
+            $ref: '#/definitions/types.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取菜单列表
+      tags:
+      - RBAC
+  /rbac/roles:
+    get:
+      description: 获取 RBAC 系统中所有角色，由网关转发到 ZebraRBAC `/api/roles`
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 角色列表
+          schema:
+            $ref: '#/definitions/types.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/types.Response'
+        "403":
+          description: 权限不足
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取角色列表
+      tags:
+      - RBAC
+  /rbac/users:
+    get:
+      description: 获取 RBAC 系统中的用户列表（分页），由网关转发到 ZebraRBAC `/api/users`
+      parameters:
+      - default: 0
+        description: 页码（从 0 开始）
+        in: query
+        name: current
+        type: integer
+      - default: 20
+        description: 每页数量
+        in: query
+        name: size
+        type: integer
+      - description: 用户名搜索
+        in: query
+        name: username
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 用户列表
+          schema:
+            $ref: '#/definitions/types.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/types.Response'
+        "403":
+          description: 权限不足
+          schema:
+            $ref: '#/definitions/types.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取用户列表
+      tags:
+      - RBAC
+securityDefinitions:
+  BearerAuth:
+    description: 格式：Bearer <JWT Token>
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
