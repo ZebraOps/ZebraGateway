@@ -7,9 +7,10 @@ app:
   # 权限缓存 TTL（秒），设为 0 可禁用缓存
   CacheTTL: 300
   # 动态路由持久化存储（PostgreSQL DSN）
-  DatabaseURL: "postgres://zebra:pass123@192.168.41.54:5432/zebra_gateway?sslmode=disable"
+  DatabaseURL: "postgres://postgres:postgres123@192.168.192.87:5432/zebra_gateway?sslmode=disable"
   # 路由自动重载间隔（支持 s/m/h 单位）
   RouteReloadInterval: "30s"
+
 
 # 后端服务路由表
 # prefix  : 网关对外暴露的路径前缀
