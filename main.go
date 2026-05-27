@@ -184,7 +184,18 @@ func main() {
 	// --- 初始化 Gin ---
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(cors.Default())
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://127.0.0.1:4120",
+			"http://localhost:4120",
+			"http://192.168.3.15:4120",
+		},
+		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
+		ExposeHeaders: []string{"Content-Length", "Content-Type"},
+		AllowCredentials: false,
+		MaxAge: 12 * time.Hour,
+	}))
 	r.Use(middleware.RequestLogger(logger))
 	r.Use(middleware.Auth(cfg.JWTSecret, rbacClient, authCache, whitelist, logger, routeManager, routeManager))
 
