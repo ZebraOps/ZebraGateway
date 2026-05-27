@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"time"
 
 	"github.com/ZebraOps/ZebraGateway/internal/types"
@@ -43,6 +44,14 @@ type Config struct {
 	Whitelist []WhitelistConfig
 	// Logging 日志配置
 	Logging types.LoggingConfig
+	
+	// Nacos 配置中心（可选）
+	NacosServerAddr string // Nacos 服务器地址，如 "192.168.192.87:8848"
+	NacosNamespace  string // 命名空间 ID，如 "zebra-dev"
+	NacosUsername   string // Nacos 用户名
+	NacosPassword   string // Nacos 密码
+	NacosGroup      string // 配置分组，默认 DEFAULT_GROUP
+	UseServiceDiscovery bool // 是否使用服务发现（从 Nacos 获取 ZebraRBAC 地址）
 }
 
 func Load() *Config {
@@ -52,6 +61,7 @@ func Load() *Config {
 
 	// 支持通过环境变量覆盖（前缀 ZEBRA_GW_）
 	viper.SetEnvPrefix("ZEBRA_GW")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
@@ -61,13 +71,19 @@ func Load() *Config {
 	}
 
 	// 默认值
-	viper.SetDefault("app.Port", "8080")
+	viper.SetDefault("app.Port", "4121")
 	viper.SetDefault("app.CacheTTL", 300)
 	viper.SetDefault("app.RouteReloadInterval", "30s")
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("logging.encoding", "json")
 	viper.SetDefault("logging.output_paths", []string{"stdout"})
 	viper.SetDefault("logging.error_output_paths", []string{"stderr"})
+	
+	// Nacos 默认值
+	viper.SetDefault("nacos.username", "nacos")
+	viper.SetDefault("nacos.password", "nacos")
+	viper.SetDefault("nacos.group", "DEFAULT_GROUP")
+	viper.SetDefault("nacos.use_service_discovery", false)
 
 	reloadInterval, err := time.ParseDuration(viper.GetString("app.RouteReloadInterval"))
 	if err != nil {
@@ -81,6 +97,15 @@ func Load() *Config {
 		CacheTTL:            viper.GetInt("app.CacheTTL"),
 		DatabaseURL:         viper.GetString("app.DatabaseURL"),
 		RouteReloadInterval: reloadInterval,
+		
+		// Nacos 配置
+		NacosServerAddr:     viper.GetString("nacos.server_addr"),
+		NacosNamespace:      viper.GetString("nacos.namespace"),
+		NacosUsername:       viper.GetString("nacos.username"),
+		NacosPassword:       viper.GetString("nacos.password"),
+		NacosGroup:          viper.GetString("nacos.group"),
+		UseServiceDiscovery: viper.GetBool("nacos.use_service_discovery"),
+		
 		Logging: types.LoggingConfig{
 			Level:            viper.GetString("logging.level"),
 			Encoding:         viper.GetString("logging.encoding"),

@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/ZebraOps/ZebraGateway/config"
 	"github.com/ZebraOps/ZebraGateway/internal/api"
@@ -14,6 +18,7 @@ import (
 	"github.com/ZebraOps/ZebraGateway/internal/store"
 	"github.com/ZebraOps/ZebraGateway/pkg/cache"
 	"github.com/ZebraOps/ZebraGateway/pkg/log"
+	nacosClient "github.com/ZebraOps/ZebraGateway/pkg/nacos"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -27,7 +32,7 @@ import (
 // @title           ZebraGateway API
 // @version         1.0.0
 // @description     基于 Gin 的轻量级 API 网关，对接 ZebraRBAC 实现网关层权限校验。\n\n## 鉴权说明\n\n除白名单接口外，所有接口需在请求头中携带 JWT Token：\n```\nAuthorization: Bearer <token>\n```\n\nToken 通过 `POST /rbac/login/access-token` 获取。
-// @host            localhost:8080
+// @host            localhost:4121
 // @BasePath        /
 // @securityDefinitions.apikey  BearerAuth
 // @in                          header
@@ -45,10 +50,78 @@ func main() {
 		os.Exit(1)
 	}
 	logger := log.L()
-	logger.Info("ZebraGateway 正在启动",
+	
+	logger.Info("========================================")
+	logger.Info("ZebraGateway 正在启动...")
+	logger.Info("========================================")
+
+	// --- 初始化 Nacos 客户端（可选） ---
+	var nacos *nacosClient.Client
+	var nacosLoader *nacosClient.ConfigLoader
+	
+	if cfg.NacosServerAddr != "" {
+		logger.Info("检测到 Nacos 配置，开始初始化 Nacos 客户端",
+			zap.String("server", cfg.NacosServerAddr),
+			zap.String("namespace", cfg.NacosNamespace),
+		)
+		
+		nc, err := nacosClient.NewClient(nacosClient.Config{
+			ServerAddr: cfg.NacosServerAddr,
+			Namespace:  cfg.NacosNamespace,
+			Username:   cfg.NacosUsername,
+			Password:   cfg.NacosPassword,
+			Group:      cfg.NacosGroup,
+			LogLevel:   cfg.Logging.Level,
+		}, logger)
+		
+		if err != nil {
+			logger.Error("Nacos 客户端初始化失败，将使用本地配置", zap.Error(err))
+		} else {
+			nacos = nc
+			nacosLoader = nacosClient.NewConfigLoader(nc, logger)
+			
+			// 从 Nacos 加载配置（覆盖本地配置）
+			logger.Info("正在从 Nacos 加载配置...")
+			
+			// 加载数据库配置
+			if dbURL := nacosLoader.LoadDatabaseURL(cfg.DatabaseURL); dbURL != "" {
+				cfg.DatabaseURL = dbURL
+			}
+			
+			// 加载 JWT 密钥
+			if jwtSecret := nacosLoader.LoadJWTSecret(cfg.JWTSecret); jwtSecret != "" {
+				cfg.JWTSecret = jwtSecret
+			}
+			
+			// 加载缓存 TTL
+			cfg.CacheTTL = nacosLoader.LoadCacheTTL(cfg.CacheTTL)
+			
+			// 加载路由重载间隔
+			cfg.RouteReloadInterval = nacosLoader.LoadRouteReloadInterval(cfg.RouteReloadInterval)
+			
+			// 如果启用服务发现，从 Nacos 获取 RBAC 服务地址
+			if cfg.UseServiceDiscovery {
+				logger.Info("已启用服务发现，尝试从 Nacos 发现 ZebraRBAC 服务...")
+				rbacURL, err := nacosLoader.DiscoverRBACService()
+				if err != nil {
+					logger.Warn("服务发现失败，使用配置中的 RBAC 地址", zap.Error(err))
+				} else {
+					cfg.RbacURL = rbacURL
+					logger.Info("✓ 服务发现成功", zap.String("rbacURL", rbacURL))
+				}
+			}
+			
+			logger.Info("✓ Nacos 配置加载完成")
+		}
+	} else {
+		logger.Info("未配置 Nacos，使用本地配置")
+	}
+	
+	logger.Info("当前配置",
 		zap.String("port", cfg.Port),
 		zap.String("rbacURL", cfg.RbacURL),
 		zap.Int("cacheTTL", cfg.CacheTTL),
+		zap.Duration("routeReloadInterval", cfg.RouteReloadInterval),
 	)
 
 	// --- 连接数据库，初始化动态路由管理器 ---
@@ -72,6 +145,32 @@ func main() {
 	// --- 初始化 RBAC 客户端和权限缓存 ---
 	rbacClient := rbac.New(cfg.RbacURL)
 	authCache := cache.New(cfg.CacheTTL)
+	
+	// 如果启用了服务发现，启动定时任务刷新 RBAC 服务地址
+	if nacos != nil && cfg.UseServiceDiscovery {
+		go func() {
+			ticker := time.NewTicker(30 * time.Second)
+			defer ticker.Stop()
+			
+			for range ticker.C {
+				rbacURL, err := nacosLoader.DiscoverRBACService()
+				if err != nil {
+					logger.Warn("定时服务发现失败", zap.Error(err))
+					continue
+				}
+				
+				// 如果地址变更，更新 RBAC 客户端
+				if rbacURL != rbacClient.GetBaseURL() {
+					logger.Info("RBAC 服务地址已变更",
+						zap.String("old", rbacClient.GetBaseURL()),
+						zap.String("new", rbacURL),
+					)
+					rbacClient.UpdateBaseURL(rbacURL)
+				}
+			}
+		}()
+		logger.Info("✓ 已启动 RBAC 服务发现定时任务（30s 刷新）")
+	}
 
 	// --- 构建静态白名单（YAML 来源） ---
 	var whitelist []middleware.WhitelistEntry
@@ -117,12 +216,91 @@ func main() {
 	// --- 动态反向代理（NoRoute 捕获所有未匹配路径） ---
 	r.NoRoute(routeManager.ServeProxy)
 
-	addr := fmt.Sprintf(":%s", cfg.Port)
-	logger.Info("ZebraGateway 启动成功", zap.String("addr", addr))
-
-	if err := r.Run(addr); err != nil {
-		logger.Fatal("服务器启动失败", zap.Error(err))
+	// --- 注册服务到 Nacos ---
+	if nacos != nil {
+		serviceIP := getLocalIP()
+		servicePort := getPortNumber(cfg.Port)
+		
+		err := nacos.RegisterInstance("zebra-gateway", serviceIP, uint64(servicePort), map[string]string{
+			"version":   "1.0.0",
+			"endpoints": "/admin,/swagger,/health",
+			"description": "ZebraGateway API 网关服务",
+		})
+		
+		if err != nil {
+			logger.Error("服务注册失败", zap.Error(err))
+		} else {
+			logger.Info("✓ 服务注册成功",
+				zap.String("service", "zebra-gateway"),
+				zap.String("ip", serviceIP),
+				zap.Uint64("port", uint64(servicePort)),
+			)
+		}
 	}
+
+	addr := fmt.Sprintf(":%s", cfg.Port)
+	logger.Info("========================================")
+	logger.Info("ZebraGateway 启动成功", zap.String("addr", addr))
+	logger.Info("========================================")
+
+	// --- 启动服务器，支持优雅关闭 ---
+	srv := make(chan error, 1)
+	go func() {
+		srv <- r.Run(addr)
+	}()
+
+	// 等待中断信号
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case err := <-srv:
+		logger.Fatal("服务器启动失败", zap.Error(err))
+	case sig := <-quit:
+		logger.Info("收到退出信号，开始优雅关闭...", zap.String("signal", sig.String()))
+		
+		// 注销 Nacos 服务
+		if nacos != nil {
+			serviceIP := getLocalIP()
+			servicePort := getPortNumber(cfg.Port)
+			
+			err := nacos.DeregisterInstance("zebra-gateway", serviceIP, uint64(servicePort))
+			if err != nil {
+				logger.Error("服务注销失败", zap.Error(err))
+			} else {
+				logger.Info("✓ 服务注销成功")
+			}
+		}
+		
+		logger.Info("ZebraGateway 已关闭")
+	}
+}
+
+// getLocalIP 获取本机 IP 地址
+func getLocalIP() string {
+	// 优先使用环境变量
+	if ip := os.Getenv("SERVICE_IP"); ip != "" {
+		return ip
+	}
+	
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return "127.0.0.1"
+	}
+	defer conn.Close()
+	
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String()
+}
+
+// getPortNumber 从端口字符串提取端口号
+func getPortNumber(port string) int {
+	var p int
+	fmt.Sscanf(port, "%d", &p)
+	if p == 0 {
+		return 4121
+	}
+	return p
 }
 
 // seedFromConfig 在数据库中没有任何路由时，将 YAML 配置中的服务路由和白名单导入数据库。

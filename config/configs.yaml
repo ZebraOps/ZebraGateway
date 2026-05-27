@@ -1,5 +1,5 @@
 app:
-  Port: "8080"
+  Port: "4121"
   # 与 ZebraRBAC SECRET_KEY 保持一致，生产环境通过环境变量 ZEBRA_GW_APP_JWTSECRET 注入
   JWTSecret: "Zu+1MV0HDNrXYGsGupBTUfAxHWfSfZ4xhLbc4fDALI8="
   # ZebraRBAC 服务地址
@@ -56,3 +56,11 @@ logging:
   max_age: 30 # days，日志文件保留天数
   max_backups: 10 # 保留的旧日志文件数量
   compress: true
+
+nacos:
+  server_addr: "localhost:8848"
+  namespace: ""
+  username: "nacos"
+  password: "nacos"
+  group: "DEFAULT_GROUP"
+  use_service_discovery: true

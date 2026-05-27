@@ -52,7 +52,7 @@
 ```
                           ┌──────────────────────────────────────┐
   Client                  │            ZebraGateway               │
-  ─────                   │               :8080                   │
+  ─────                   │               :4121                   │
   Browser / App  ─HTTP──► │                                       │
                           │  ┌─────────────────────────────────┐  │
                           │  │       RequestLogger MW          │  │  Log requests
@@ -176,7 +176,7 @@ Config file path: `config/configs.yaml`. All fields can be overridden via enviro
 
 ```yaml
 app:
-  Port: "8080" # Gateway listen port
+  Port: "4121" # Gateway listen port
   JWTSecret: "..." # Must match ZebraRBAC SECRET_KEY
   RbacURL: "http://..." # ZebraRBAC service URL
   CacheTTL: 300 # Permission cache TTL (seconds), 0 to disable
@@ -356,7 +356,7 @@ go run main.go
 ### Production Deployment (Environment Variable Override)
 
 ```bash
-export ZEBRA_GW_APP_PORT=8080
+export ZEBRA_GW_APP_PORT=4121
 export ZEBRA_GW_APP_JWTSECRET=<prod-secret>
 export ZEBRA_GW_APP_RBACURL=http://zebra-rbac:8000
 export ZEBRA_GW_APP_DATABASEURL=postgres://user:pass@pg-host:5432/zebra_gateway?sslmode=disable
@@ -401,7 +401,7 @@ go build -o zebra-gateway . && ./zebra-gateway
 After starting the gateway, open in browser:
 
 ```
-http://localhost:8080/swagger/index.html
+http://localhost:4121/swagger/index.html
 ```
 
 Swagger UI is fully open and **requires no JWT** for viewing docs. To test protected endpoints in Swagger UI, click **Authorize** in the top-right corner and input `Bearer <token>`.

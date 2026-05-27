@@ -52,7 +52,7 @@
 ```
                           ┌──────────────────────────────────────┐
   Client                  │            ZebraGateway               │
-  ─────                   │               :8080                   │
+  ─────                   │               :4121                   │
   Browser / App  ─HTTP──► │                                       │
                           │  ┌─────────────────────────────────┐  │
                           │  │       RequestLogger MW          │  │  记录请求日志
@@ -175,7 +175,7 @@ ZebraGateway/
 
 ```yaml
 app:
-  Port: "8080" # 网关监听端口
+  Port: "4121" # 网关监听端口
   JWTSecret: "..." # 与 ZebraRBAC SECRET_KEY 保持一致
   RbacURL: "http://..." # ZebraRBAC 服务地址
   CacheTTL: 300 # 权限缓存有效期（秒），设为 0 禁用缓存
@@ -355,7 +355,7 @@ go run main.go
 ### 生产部署（环境变量覆盖）
 
 ```bash
-export ZEBRA_GW_APP_PORT=8080
+export ZEBRA_GW_APP_PORT=4121
 export ZEBRA_GW_APP_JWTSECRET=<生产密钥>
 export ZEBRA_GW_APP_RBACURL=http://zebra-rbac:8000
 export ZEBRA_GW_APP_DATABASEURL=postgres://user:pass@pg-host:5432/zebra_gateway?sslmode=disable
@@ -400,7 +400,7 @@ go build -o zebra-gateway . && ./zebra-gateway
 启动网关后，浏览器打开：
 
 ```
-http://localhost:8080/swagger/index.html
+http://localhost:4121/swagger/index.html
 ```
 
 Swagger UI 完全开放，**无需 JWT 认证**即可查看接口文档。若需在 Swagger UI 中测试受保护接口，点击右上角 **Authorize**，输入 `Bearer <token>` 即可。

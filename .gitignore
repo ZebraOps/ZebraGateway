@@ -52,6 +52,7 @@ config/configs.local.yaml
 tmp/
 temp/
 *.tmp
+cache/
 
 # OS-specific
 .DS_Store
