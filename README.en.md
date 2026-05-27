@@ -13,6 +13,21 @@
 
 ---
 
+## ✨ Core Features
+
+- 🔐 **JWT Auth + RBAC Permission Check** — Unified authentication at gateway layer, upstream services don't need to handle auth logic
+- 🚀 **Dynamic Route Hot-Reload** — PostgreSQL-persisted config, auto-sync every 30s or real-time API trigger, no restart needed
+- ⚡ **Permission Caching** — In-memory cache for user permissions (configurable TTL), reduces RBAC service load
+- 🎯 **Smart Path Matching** — Supports exact match `/rbac/users` and parameterized paths `/rbac/roles/{role_id}`
+- 📋 **Whitelist Mechanism** — Static (YAML) + Dynamic (DB) dual-layer whitelist, flexible auth-free path config
+- 🔄 **Reverse Proxy** — Based on Go stdlib `httputil.ReverseProxy`, supports path rewrite
+- 📊 **Structured Logging** — Zap + Lumberjack, JSON-format logs with auto rotation
+- 📚 **Swagger Docs** — Auto-generated OpenAPI documentation with built-in Swagger UI
+- 🛠️ **CLI Tool** — Cobra-powered command-line management tool for route & whitelist CRUD
+- 🔗 **Multi-instance Consistency** — Periodic sync + write-triggered updates ensure config consistency across gateway instances
+
+---
+
 ## ⚙️ Tech Stack
 
 | Category             | Tech / Version                                                                                                          |
@@ -71,6 +86,12 @@
 
 ### Auth Middleware Detailed Flow
 
+**Key Update**: Starting from v1.1.0, permission check uses **original request path** (`c.Request.URL.Path`) instead of gateway-rewritten path, ensuring precise matching with function permission URIs stored in database. Supports three matching modes:
+
+1. **Exact match** — `/rbac/users` only matches that exact path
+2. **Prefix wildcard** — `/rbac/users/*` matches `/rbac/users/123` and all sub-paths
+3. **Parameterized paths** — `/rbac/roles/{role_id}` matches `/rbac/roles/123`, `/rbac/roles/admin`, etc.
+
 ```
 Request arrives at gateway
     │
@@ -97,7 +118,8 @@ Request arrives at gateway
     │
     └─ Check request.path ∈ permissions.functions list
            ├── Support exact match："/publish/tasks"
-           └── Support prefix wildcard："/publish/tasks/*"
+           ├── Support prefix wildcard："/publish/tasks/*"
+           └── Support parameterized paths："/rbac/roles/{role_id}" matches "/rbac/roles/123"
                │
                ├── Matched ──► Allow, inject X-User-Id / X-User-Name headers
                └── Not matched ──► 403 Permission denied
@@ -411,19 +433,26 @@ swag init --parseDependency --parseInternal
 ## 🔗 Relationship with Other Zebra Services
 
 ```
-ZebraAdmin (React)           ← Frontend management interface
+ZebraAdmin (React)           ← Frontend interface with component-level permissions
     │  HTTP
     ▼
-ZebraGateway (This Project)  ← Unified entry, auth & dynamic routing
-    ├──► ZebraRBAC (Python/FastAPI)   ← Permission data source
-    ├──► ZebraCICD (Go)               ← CI/CD pipeline
+ZebraGateway (This Project)  ← Unified entry, auth & dynamic routing & function permission check
+    ├──► ZebraRBAC (Python/FastAPI)   ← Permission data source (users/roles/menus/functions/components)
+    ├──► ZebraCICD (Go)               ← CI/CD pipeline management
     └──► Other backend services        ← Business services
 
 ZebraDeployment              ← Docker Compose one-click deployment
 
-PostgreSQL                   ← ZebraGateway route persistence (zebra_gateway db)
-MySQL                        ← ZebraRBAC permission data persistence (zebra_rbac db)
+PostgreSQL                   ← Shared database
+    ├── zebra_gateway db             ← ZebraGateway route config
+    └── zebra_rbac db                ← ZebraRBAC permission data (migrated from MySQL)
 ```
+
+**Three-Level Permission Model**:
+
+- **Function Permission** — Gateway-layer API endpoint authorization (implemented in this project)
+- **Menu Permission** — Frontend page visibility control (ZebraRBAC dynamic menu)
+- **Component Permission** — Frontend button/element level control (ZebraAdmin component permission system)
 
 ---
 

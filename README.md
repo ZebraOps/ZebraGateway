@@ -13,6 +13,21 @@
 
 ---
 
+## ✨ 核心特性
+
+- 🔐 **JWT 认证 + RBAC 权限校验** — 网关层统一鉴权，上游服务无需关心认证逻辑
+- 🚀 **动态路由热更新** — PostgreSQL 持久化配置，30s 自动同步或 API 实时触发，无需重启
+- ⚡ **权限缓存** — 内存缓存用户权限（可配置 TTL），减少 RBAC 服务调用压力
+- 🎯 **智能路径匹配** — 支持精确匹配 `/rbac/users` 和参数化路径 `/rbac/roles/{role_id}`
+- 📋 **白名单机制** — 静态（YAML）+ 动态（DB）双层白名单，灵活配置免鉴权路径
+- 🔄 **反向代理** — 基于 Go 标准库 `httputil.ReverseProxy`，支持路径重写
+- 📊 **结构化日志** — Zap + Lumberjack，JSON 格式日志自动轮转
+- 📚 **Swagger 文档** — 自动生成 OpenAPI 文档，内置 Swagger UI
+- 🛠️ **CLI 工具** — Cobra 驱动的命令行管理工具，支持路由和白名单 CRUD
+- 🔗 **多实例一致性** — 定时同步 + 写操作触发，确保多网关实例配置一致
+
+---
+
 ## ⚙️ 技术栈
 
 | 类别         | 技术 / 版本                                                                                                          |
@@ -70,6 +85,12 @@
 
 ### 鉴权中间件详细流程
 
+**关键更新**：从 v1.1.0 开始，权限检查使用**原始请求路径**（`c.Request.URL.Path`）而非网关内部重写后的路径，确保与数据库中存储的功能权限 URI 精确匹配。支持以下三种匹配模式：
+
+1. **精确匹配** — `/rbac/users` 只匹配该路径
+2. **前缀通配** — `/rbac/users/*` 匹配 `/rbac/users/123` 等所有子路径
+3. **参数化路径** — `/rbac/roles/{role_id}` 匹配 `/rbac/roles/123`、`/rbac/roles/admin` 等
+
 ```
 请求到达网关
     │
@@ -96,7 +117,8 @@
     │
     └─ 检查 request.path ∈ permissions.functions 列表
            ├── 支持精确匹配："/publish/tasks"
-           └── 支持前缀通配："/publish/tasks/*"
+           ├── 支持前缀通配："/publish/tasks/*"
+           └── 支持参数化路径："/rbac/roles/{role_id}" 匹配 "/rbac/roles/123"
                │
                ├── 匹配 ──► 放行，注入 X-User-Id / X-User-Name 请求头
                └── 不匹配 ──► 403 权限不足
@@ -410,19 +432,26 @@ swag init --parseDependency --parseInternal
 ## 🔗 与其他 Zebra 服务的关系
 
 ```
-ZebraAdmin (React)           ← 前端管理界面
+ZebraAdmin (React)           ← 前端管理界面，组件级权限控制
     │  HTTP
     ▼
-ZebraGateway (本项目)        ← 统一入口，认证 & 动态路由
-    ├──► ZebraRBAC (Python/FastAPI)   ← 权限数据来源
-    ├──► ZebraCICD (Go)               ← CI/CD 流水线
+ZebraGateway (本项目)        ← 统一入口，认证 & 动态路由 & 功能权限校验
+    ├──► ZebraRBAC (Python/FastAPI)   ← 权限数据来源（用户/角色/菜单/功能/组件）
+    ├──► ZebraCICD (Go)               ← CI/CD 流水线管理
     └──► 其他后端服务                  ← 业务服务
 
 ZebraDeployment              ← Docker Compose 一键拉起上述所有服务
 
-PostgreSQL                   ← ZebraGateway 路由配置持久化（zebra_gateway 库）
-MySQL                        ← ZebraRBAC 权限数据持久化（zebra_rbac 库）
+PostgreSQL                   ← 共享数据库
+    ├── zebra_gateway 库             ← ZebraGateway 路由配置
+    └── zebra_rbac 库                ← ZebraRBAC 权限数据（已从 MySQL 迁移）
 ```
+
+**三级权限模型**：
+
+- **功能权限** — 网关层 API 接口级别鉴权（本项目实现）
+- **菜单权限** — 前端页面可见性控制（ZebraRBAC 动态菜单）
+- **组件权限** — 前端按钮/元素级别控制（ZebraAdmin 组件权限系统）
 
 ---
 
