@@ -135,17 +135,13 @@ func Auth(
 
 		// --- 权限校验 ---
 		if !authData.Permissions.All {
-			// 将网关路径转换为后端路径再做权限比对
-			checkPath := path
-			if pathRewriter != nil {
-				checkPath = pathRewriter.RewritePath(path)
-			}
-			if !hasPermission(authData.Permissions.Functions, method, checkPath) {
+			// 直接使用原始请求路径与功能 URI 比对
+			// （功能 URI 存储为网关路径，如 /rbac/groups，无需重写）
+			if !hasPermission(authData.Permissions.Functions, method, path) {
 				logger.Warn("权限不足",
 					zap.String("userID", userID),
 					zap.String("method", method),
 					zap.String("path", path),
-					zap.String("checkPath", checkPath),
 				)
 				types.Error(c, http.StatusForbidden, 403, "权限不足，无法访问该资源")
 				return
@@ -189,8 +185,9 @@ func isWhitelisted(entry WhitelistEntry, method, path string) bool {
 //  2. 否则同时匹配 method（不区分大小写）和 path
 //
 // 路径匹配规则（优先级从高到低）：
-//   - 精确匹配："/cicd/applications"
-//   - 前缀通配："/cicd/applications/*" 匹配 "/cicd/applications/1" 等所有子路径
+//   - 精确匹配："/rbac/groups"
+//   - 前缀通配："/rbac/applications/*" 匹配 "/rbac/applications/1" 等所有子路径
+//   - 路径参数："/rbac/roles/{role_id}" 匹配 "/rbac/roles/5"
 func hasPermission(functions []types.RBACFunction, method, path string) bool {
 	for _, f := range functions {
 		// method 校验：空字符串或 * 表示不限方法
@@ -209,6 +206,32 @@ func hasPermission(functions []types.RBACFunction, method, path string) bool {
 				return true
 			}
 		}
+		// {xxx} 风格路径参数匹配：/rbac/roles/{role_id} 匹配 /rbac/roles/5
+		if matchPathParams(f.URI, path) {
+			return true
+		}
 	}
 	return false
+}
+
+// matchPathParams 对包含 {xxx} 占位符的 URI 模板做路径匹配。
+func matchPathParams(pattern, path string) bool {
+	if !strings.Contains(pattern, "{") {
+		return false
+	}
+	patSegs := strings.Split(pattern, "/")
+	pathSegs := strings.Split(path, "/")
+	if len(patSegs) != len(pathSegs) {
+		return false
+	}
+	for i, ps := range patSegs {
+		if ps == pathSegs[i] {
+			continue
+		}
+		if strings.HasPrefix(ps, "{") && strings.HasSuffix(ps, "}") {
+			continue // 路径参数占位符，任意值均可匹配
+		}
+		return false
+	}
+	return true
 }
