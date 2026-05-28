@@ -23,6 +23,9 @@ services:
   - prefix: "/rbac"
     target: "http://127.0.0.1:4122"
     rewrite: "/api"
+  - prefix: "/cicd"
+    target: "http://127.0.0.1:4123"
+    rewrite: ""
 
 # 白名单路由：不需要 JWT 认证即可访问
 # method 支持 * 通配符
