@@ -46,8 +46,8 @@ definitions:
         example: ""
         type: string
       target:
-        description: Target 后端服务根地址，如 http://192.168.30.198:8000（必填）
-        example: http://192.168.30.198:8000
+        description: Target 后端服务根地址，如 http://192.168.30.198:4122（必填）
+        example: http://192.168.30.198:4122
         type: string
     required:
     - prefix
@@ -98,7 +98,7 @@ definitions:
         example: ""
         type: string
       target:
-        example: http://192.168.30.198:8000
+        example: http://192.168.30.198:4122
         type: string
     type: object
   handler.swaggerWhitelistRoute:
@@ -145,7 +145,7 @@ definitions:
         type: string
       target:
         description: Target 目标地址（为空则不更新）
-        example: http://192.168.30.198:8000
+        example: http://192.168.30.198:4122
         type: string
     type: object
   types.RBACAuthData:
@@ -198,7 +198,12 @@ host: localhost:4121
 info:
   contact: {}
   description: '基于 Gin 的轻量级 API 网关，对接 ZebraRBAC 实现网关层权限校验。\n\n## 鉴权说明\n\n除白名单接口外，所有接口需在请求头中携带
-    JWT Token：\n```\nAuthorization: Bearer <token>\n```\n\nToken 通过 `POST /rbac/login/access-token`
+    JWT Token：
+```
+Authorization: Bearer <token>
+```
+
+Token 通过 `POST /rbac/login/access-token`
     获取。'
   title: ZebraGateway API
   version: 1.0.0

@@ -63,7 +63,7 @@
                           │  │  1. 静态白名单检查（YAML）      │  │
                           │  │  2. 动态白名单检查（DB）        │  │
                           │  │  3. 提取 Bearer Token           │  │
-                          │  │  4. 本地 JWT HS256 验证         │  │◄──► ZebraRBAC :8000
+                          │  │  4. 本地 JWT HS256 验证         │  │◄──► ZebraRBAC :4122
                           │  │  5. 查权限缓存(TTL 5m)          │  │    GET /api/authorization
                           │  │  6. 未命中→调用RBAC             │  │
                           │  │  7. 权限列表匹配                │  │
@@ -79,7 +79,7 @@
                                             │
                        ┌────────────────────┼───────────────────────┐
                        ▼                                             ▼
-                ZebraRBAC :8000                         其他后端服务
+                ZebraRBAC :4122                         其他后端服务
                /rbac/* → /api/*                      /<service>/* → /*
 ```
 
@@ -204,8 +204,8 @@ whitelist:
 
 | 客户端请求路径                  | 转发到                                    | 说明                        |
 | ------------------------------- | ----------------------------------------- | --------------------------- |
-| `POST /rbac/login/access-token` | `http://rbac:8000/api/login/access-token` | 白名单，直接透传            |
-| `GET /rbac/users`               | `http://rbac:8000/api/users`              | strip `/rbac` → 拼接 `/api` |
+| `POST /rbac/login/access-token` | `http://rbac:4122/api/login/access-token` | 白名单，直接透传            |
+| `GET /rbac/users`               | `http://rbac:4122/api/users`              | strip `/rbac` → 拼接 `/api` |
 
 路由采用**最长前缀优先**匹配策略，更精确的前缀优先生效。
 
@@ -334,7 +334,7 @@ zebra-gw whitelist delete 5
 
 - Go 1.20+
 - PostgreSQL 实例（用于路由配置持久化），提前创建数据库 `zebra_gateway`
-- ZebraRBAC 已启动（默认 `:8000`）
+- ZebraRBAC 已启动（默认 `:4122`）
 - `JWTSecret` 与 ZebraRBAC `SECRET_KEY` 保持一致
 
 ### 本地开发
@@ -357,7 +357,7 @@ go run main.go
 ```bash
 export ZEBRA_GW_APP_PORT=4121
 export ZEBRA_GW_APP_JWTSECRET=<生产密钥>
-export ZEBRA_GW_APP_RBACURL=http://zebra-rbac:8000
+export ZEBRA_GW_APP_RBACURL=http://zebra-rbac:4122
 export ZEBRA_GW_APP_DATABASEURL=postgres://user:pass@pg-host:5432/zebra_gateway?sslmode=disable
 
 go build -o zebra-gateway . && ./zebra-gateway

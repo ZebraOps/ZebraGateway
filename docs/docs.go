@@ -887,9 +887,9 @@ const docTemplate = `{
                     "example": ""
                 },
                 "target": {
-                    "description": "Target 后端服务根地址，如 http://192.168.30.198:8000（必填）",
+                    "description": "Target 后端服务根地址，如 http://192.168.30.198:4122（必填）",
                     "type": "string",
-                    "example": "http://192.168.30.198:8000"
+                    "example": "http://192.168.30.198:4122"
                 }
             }
         },
@@ -954,7 +954,7 @@ const docTemplate = `{
                 },
                 "target": {
                     "type": "string",
-                    "example": "http://192.168.30.198:8000"
+                    "example": "http://192.168.30.198:4122"
                 }
             }
         },
@@ -1017,7 +1017,7 @@ const docTemplate = `{
                 "target": {
                     "description": "Target 目标地址（为空则不更新）",
                     "type": "string",
-                    "example": "http://192.168.30.198:8000"
+                    "example": "http://192.168.30.198:4122"
                 }
             }
         },

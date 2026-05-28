@@ -321,7 +321,7 @@ type swaggerServiceRoute struct {
 	UpdatedAt   string  `json:"UpdatedAt" example:"2026-03-23T23:05:00.567525+08:00"`
 	DeletedAt   *string `json:"DeletedAt" example:"null"`
 	Prefix      string  `json:"prefix" example:"/rbac"`
-	Target      string  `json:"target" example:"http://192.168.30.198:8000"`
+	Target      string  `json:"target" example:"http://192.168.30.198:4122"`
 	Rewrite     string  `json:"rewrite" example:""`
 	Description string  `json:"description" example:"ZebraRBAC 权限服务"`
 	Enabled     bool    `json:"enabled" example:"true"`
@@ -342,8 +342,8 @@ type swaggerWhitelistRoute struct {
 type createRouteInput struct {
 	// Prefix 网关对外暴露的路径前缀，如 /rbac（必填，全局唯一）
 	Prefix string `json:"prefix" binding:"required" example:"/rbac"`
-	// Target 后端服务根地址，如 http://192.168.30.198:8000（必填）
-	Target string `json:"target" binding:"required" example:"http://192.168.30.198:8000"`
+	// Target 后端服务根地址，如 http://192.168.30.198:4122（必填）
+	Target string `json:"target" binding:"required" example:"http://192.168.30.198:4122"`
 	// Rewrite strip Prefix 后插入的路径前缀，空字符串表示不改写
 	Rewrite string `json:"rewrite" example:""`
 	// Description 路由描述
@@ -357,7 +357,7 @@ type updateRouteInput struct {
 	// Prefix 路径前缀（为空则不更新）
 	Prefix string `json:"prefix" example:"/rbac"`
 	// Target 目标地址（为空则不更新）
-	Target string `json:"target" example:"http://192.168.30.198:8000"`
+	Target string `json:"target" example:"http://192.168.30.198:4122"`
 	// Rewrite 重写前缀
 	Rewrite string `json:"rewrite" example:""`
 	// Description 描述（为空则不更新）

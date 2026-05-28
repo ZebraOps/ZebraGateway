@@ -63,7 +63,7 @@
                           │  │  1. Static whitelist check      │  │
                           │  │  2. Dynamic whitelist check (DB)│  │
                           │  │  3. Extract Bearer Token        │  │
-                          │  │  4. Local JWT HS256 verify      │  │◄──► ZebraRBAC :8000
+                          │  │  4. Local JWT HS256 verify      │  │◄──► ZebraRBAC :4122
                           │  │  5. Check permission cache      │  │    GET /api/authorization
                           │  │  6. Cache miss → call RBAC      │  │
                           │  │  7. Permission matching         │  │
@@ -80,7 +80,7 @@
                                             │
                        ┌────────────────────┼───────────────────────┐
                        ▼                                             ▼
-                ZebraRBAC :8000                         Other backend services
+                ZebraRBAC :4122                         Other backend services
                /rbac/* → /api/*                      /<service>/* → /*
 ```
 
@@ -205,8 +205,8 @@ whitelist:
 
 | Client Request Path             | Forward To                                | Description                   |
 | ------------------------------- | ----------------------------------------- | ----------------------------- |
-| `POST /rbac/login/access-token` | `http://rbac:8000/api/login/access-token` | Whitelist, pass through       |
-| `GET /rbac/users`               | `http://rbac:8000/api/users`              | Strip `/rbac` → append `/api` |
+| `POST /rbac/login/access-token` | `http://rbac:4122/api/login/access-token` | Whitelist, pass through       |
+| `GET /rbac/users`               | `http://rbac:4122/api/users`              | Strip `/rbac` → append `/api` |
 
 Routes use **longest prefix first** matching strategy. More precise prefixes take precedence.
 
@@ -335,7 +335,7 @@ Upstream services can directly read these headers to identify the caller, no nee
 
 - Go 1.20+
 - PostgreSQL instance (for route persistence), pre-create database `zebra_gateway`
-- ZebraRBAC running (default `:8000`)
+- ZebraRBAC running (default `:4122`)
 - `JWTSecret` must match ZebraRBAC `SECRET_KEY`
 
 ### Local Development
@@ -358,7 +358,7 @@ go run main.go
 ```bash
 export ZEBRA_GW_APP_PORT=4121
 export ZEBRA_GW_APP_JWTSECRET=<prod-secret>
-export ZEBRA_GW_APP_RBACURL=http://zebra-rbac:8000
+export ZEBRA_GW_APP_RBACURL=http://zebra-rbac:4122
 export ZEBRA_GW_APP_DATABASEURL=postgres://user:pass@pg-host:5432/zebra_gateway?sslmode=disable
 
 go build -o zebra-gateway . && ./zebra-gateway

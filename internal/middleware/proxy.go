@@ -16,7 +16,7 @@ import (
 type ServiceRoute struct {
 	// Prefix 网关对外前缀，如 "/rbac"
 	Prefix string
-	// Target 后端服务根地址，如 "http://localhost:8000"
+	// Target 后端服务根地址，如 "http://localhost:4122"
 	Target string
 	// Rewrite 路径改写前缀，如 "/api"。
 	// 转发路径 = Rewrite + TrimPrefix(originalPath, Prefix)

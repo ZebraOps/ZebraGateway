@@ -3,7 +3,7 @@ app:
   # 与 ZebraRBAC SECRET_KEY 保持一致，生产环境通过环境变量 ZEBRA_GW_APP_JWTSECRET 注入
   JWTSecret: "Zu+1MV0HDNrXYGsGupBTUfAxHWfSfZ4xhLbc4fDALI8="
   # ZebraRBAC 服务地址
-  RbacURL: "http://127.0.0.1:8000"
+  RbacURL: "http://127.0.0.1:4122"
   # 权限缓存 TTL（秒），设为 0 可禁用缓存
   CacheTTL: 300
   # 动态路由持久化存储（PostgreSQL DSN）
@@ -18,10 +18,10 @@ app:
 # rewrite : strip prefix 后插入的路径前缀（空字符串表示不改写）
 #
 # 示例转发规则：
-#   /rbac/login/access-token -> http://localhost:8000/api/login/access-token
+#   /rbac/login/access-token -> http://localhost:4122/api/login/access-token
 services:
   - prefix: "/rbac"
-    target: "http://127.0.0.1:8000"
+    target: "http://127.0.0.1:4122"
     rewrite: "/api"
 
 # 白名单路由：不需要 JWT 认证即可访问

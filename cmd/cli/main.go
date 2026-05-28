@@ -3,7 +3,7 @@
 // 用法:
 //
 //	zebra-gw route list
-//	zebra-gw route add   -p /rbac -t http://192.168.30.198:8000 -r /api
+//	zebra-gw route add   -p /rbac -t http://192.168.30.198:4122 -r /api
 //	zebra-gw route update <id> [flags]
 //	zebra-gw route delete <id>
 //	zebra-gw route enable  <id>
@@ -115,7 +115,7 @@ func routeAddCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&prefix, "prefix", "p", "", "路径前缀（必填），如 /rbac")
-	cmd.Flags().StringVarP(&target, "target", "t", "", "后端服务地址（必填），如 http://192.168.30.198:8000")
+	cmd.Flags().StringVarP(&target, "target", "t", "", "后端服务地址（必填），如 http://192.168.30.198:4122")
 	cmd.Flags().StringVarP(&rewrite, "rewrite", "r", "", "路径改写前缀，如 /api")
 	cmd.Flags().StringVarP(&desc, "desc", "d", "", "路由描述")
 	cmd.Flags().BoolVar(&disabled, "disabled", false, "创建时禁用该路由")

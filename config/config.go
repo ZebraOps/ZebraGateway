@@ -12,7 +12,7 @@ import (
 type ServiceConfig struct {
 	// Prefix 网关监听前缀，如 "/rbac"
 	Prefix string `mapstructure:"prefix"`
-	// Target 后端服务地址，如 "http://localhost:8000"
+	// Target 后端服务地址，如 "http://localhost:4122"
 	Target string `mapstructure:"target"`
 	// Rewrite 路径改写前缀，如 "/api"（strip Prefix 后拼接 Rewrite 作为新路径）
 	Rewrite string `mapstructure:"rewrite"`

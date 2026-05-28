@@ -7,7 +7,7 @@ type ServiceRoute struct {
 	gorm.Model
 	// Prefix 网关对外暴露的路径前缀，如 "/rbac"
 	Prefix string `gorm:"uniqueIndex;not null;size:255" json:"prefix"`
-	// Target 后端服务根地址，如 "http://192.168.30.198:8000"
+	// Target 后端服务根地址，如 "http://192.168.30.198:4122"
 	Target string `gorm:"not null;size:512" json:"target"`
 	// Rewrite strip Prefix 后插入的路径前缀，空字符串表示不改写
 	Rewrite string `gorm:"size:255" json:"rewrite"`
