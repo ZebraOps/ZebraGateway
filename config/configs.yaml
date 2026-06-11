@@ -26,6 +26,9 @@ services:
   - prefix: "/cicd"
     target: "http://127.0.0.1:4123"
     rewrite: ""
+  - prefix: "/rag"
+    target: "http://127.0.0.1:4124"
+    rewrite: "/api"
 
 # 白名单路由：不需要 JWT 认证即可访问
 # method 支持 * 通配符
