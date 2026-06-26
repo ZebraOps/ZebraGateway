@@ -77,18 +77,24 @@ func Auth(
 		}
 
 		// --- 提取 Bearer Token ---
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			types.Error(c, http.StatusUnauthorized, 401, "缺少 Authorization 请求头")
-			return
+		// 优先从 Authorization header 获取；WebSocket 连接无法设置自定义 header，
+		// 因此对 Upgrade 请求兜底从 ?token= 查询参数读取。
+		tokenStr := ""
+		if authHeader := c.GetHeader("Authorization"); authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
+				types.Error(c, http.StatusUnauthorized, 401, "Authorization 格式错误，应为 Bearer <token>")
+				return
+			}
+			tokenStr = parts[1]
+		} else if isWebSocketUpgrade(c) {
+			tokenStr = c.Query("token")
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || !strings.EqualFold(parts[0], "bearer") {
-			types.Error(c, http.StatusUnauthorized, 401, "Authorization 格式错误，应为 Bearer <token>")
+		if tokenStr == "" {
+			types.Error(c, http.StatusUnauthorized, 401, "缺少 Authorization 请求头或 token 参数")
 			return
 		}
-		tokenStr := parts[1]
 
 		// --- 本地 JWT 验证 ---
 		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
@@ -212,6 +218,12 @@ func hasPermission(functions []types.RBACFunction, method, path string) bool {
 		}
 	}
 	return false
+}
+
+// isWebSocketUpgrade 判断是否为 WebSocket 升级请求。
+func isWebSocketUpgrade(c *gin.Context) bool {
+	return strings.EqualFold(c.GetHeader("Connection"), "upgrade") &&
+		strings.EqualFold(c.GetHeader("Upgrade"), "websocket")
 }
 
 // matchPathParams 对包含 {xxx} 占位符的 URI 模板做路径匹配。
