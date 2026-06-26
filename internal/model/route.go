@@ -11,6 +11,8 @@ type ServiceRoute struct {
 	Target string `gorm:"not null;size:512" json:"target"`
 	// Rewrite strip Prefix 后插入的路径前缀，空字符串表示不改写
 	Rewrite string `gorm:"size:255" json:"rewrite"`
+	// ServiceName Nacos 服务名，非空时优先通过服务发现解析 Target
+	ServiceName string `gorm:"size:255" json:"service_name"`
 	// Description 路由描述
 	Description string `gorm:"type:text" json:"description"`
 	// Enabled 是否启用

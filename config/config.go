@@ -16,6 +16,8 @@ type ServiceConfig struct {
 	Target string `mapstructure:"target"`
 	// Rewrite 路径改写前缀，如 "/api"（strip Prefix 后拼接 Rewrite 作为新路径）
 	Rewrite string `mapstructure:"rewrite"`
+	// ServiceName Nacos 服务名，非空时通过服务发现解析 Target（Target 作为回退）
+	ServiceName string `mapstructure:"service_name"`
 }
 
 // WhitelistConfig 白名单条目（不需要 JWT 鉴权）

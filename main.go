@@ -147,10 +147,10 @@ func main() {
 		logger.Fatal("连接数据库失败", zap.Error(err))
 	}
 
-	// 若数据库为空，自动将 YAML 配置中的静态路由和白名单导入数据库
-	seedFromConfig(db, cfg, logger)
+	// 同步 YAML 配置中的路由和白名单到数据库（首次全量导入，后续增量更新 service_name）
+	syncRoutesFromConfig(db, cfg, logger)
 
-	routeManager, err := router.New(db, logger)
+	routeManager, err := router.New(db, logger, nacosLoader)
 	if err != nil {
 		logger.Fatal("初始化路由管理器失败", zap.Error(err))
 	}
@@ -328,23 +328,43 @@ func getPortNumber(port string) int {
 	return p
 }
 
-// seedFromConfig 在数据库中没有任何路由时，将 YAML 配置中的服务路由和白名单导入数据库。
-// 这样首次启动时无需手动通过 CLI 配置路由。
-func seedFromConfig(db *gorm.DB, cfg *config.Config, logger *zap.Logger) {
+// syncRoutesFromConfig 将 YAML 配置中的路由和白名单同步到数据库。
+// - DB 为空时：全量导入（首次启动）。
+// - DB 已有路由时：仅同步 service_name 字段（增量迁移），不覆盖已有的 Target/Rewrite 等人为修改。
+func syncRoutesFromConfig(db *gorm.DB, cfg *config.Config, logger *zap.Logger) {
 	var routeCount int64
 	db.Model(&model.ServiceRoute{}).Count(&routeCount)
+
 	if routeCount == 0 && len(cfg.Services) > 0 {
+		// 首次启动：全量导入
 		for _, svc := range cfg.Services {
 			route := model.ServiceRoute{
 				Prefix:      svc.Prefix,
 				Target:      svc.Target,
 				Rewrite:     svc.Rewrite,
+				ServiceName: svc.ServiceName,
 				Description: "从 YAML 配置自动导入",
 				Enabled:     true,
 			}
 			db.Create(&route)
 		}
 		logger.Info("已将 YAML 服务路由导入数据库", zap.Int("count", len(cfg.Services)))
+	} else {
+		// 已有路由：增量同步 service_name（避免覆盖用户手动修改的 Target/Rewrite）
+		for _, svc := range cfg.Services {
+			if svc.ServiceName == "" {
+				continue
+			}
+			result := db.Model(&model.ServiceRoute{}).
+				Where("prefix = ? AND (service_name = '' OR service_name IS NULL)", svc.Prefix).
+				Update("service_name", svc.ServiceName)
+			if result.RowsAffected > 0 {
+				logger.Info("已同步路由 service_name",
+					zap.String("prefix", svc.Prefix),
+					zap.String("service_name", svc.ServiceName),
+				)
+			}
+		}
 	}
 
 	var wlCount int64

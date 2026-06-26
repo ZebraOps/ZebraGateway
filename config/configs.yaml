@@ -23,6 +23,7 @@ services:
   - prefix: "/rbac"
     target: "http://127.0.0.1:4122"
     rewrite: "/api"
+    service_name: "zebra-rbac"  # Nacos 服务名，优先于 target
   - prefix: "/cicd"
     target: "http://127.0.0.1:4123"
     rewrite: ""

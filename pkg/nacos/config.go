@@ -133,19 +133,32 @@ func (l *ConfigLoader) LoadRouteReloadInterval(defaultValue time.Duration) time.
 
 // DiscoverRBACService 通过服务发现获取 ZebraRBAC 服务地址
 // 返回格式: http://ip:port
-func (l *ConfigLoader) DiscoverRBACService() (string, error) {
-	instance, err := l.client.SelectOneHealthyInstance("zebra-rbac")
+// DiscoverService 通过 Nacos 服务发现获取指定服务的健康实例地址。
+func (l *ConfigLoader) DiscoverService(serviceName string) (string, error) {
+	instance, err := l.client.SelectOneHealthyInstance(serviceName)
 	if err != nil {
-		return "", fmt.Errorf("discover zebra-rbac: %w", err)
+		return "", fmt.Errorf("discover %s: %w", serviceName, err)
 	}
 
 	if instance == nil {
-		return "", fmt.Errorf("zebra-rbac service not found")
+		return "", fmt.Errorf("%s service not found", serviceName)
 	}
 
 	url := fmt.Sprintf("http://%s:%d", instance.IP, instance.Port)
-	l.logger.Info("通过服务发现获取 ZebraRBAC 地址", zap.String("url", url))
+	l.logger.Info("通过服务发现获取服务地址",
+		zap.String("service", serviceName),
+		zap.String("url", url),
+	)
 	return url, nil
+}
+
+func (l *ConfigLoader) DiscoverRBACService() (string, error) {
+	return l.DiscoverService("zebra-rbac")
+}
+
+// SelectOneHealthyInstance 暴露底层 Nacos 客户端的服务发现接口（供路由管理器使用）。
+func (l *ConfigLoader) SelectOneHealthyInstance(serviceName string) (*Instance, error) {
+	return l.client.SelectOneHealthyInstance(serviceName)
 }
 
 // WatchCacheTTL 监听 CacheTTL 配置变更
