@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ZebraOps/ZebraGateway/internal/middleware"
 	"github.com/ZebraOps/ZebraGateway/internal/model"
 	"github.com/ZebraOps/ZebraGateway/internal/types"
 	nacosClient "github.com/ZebraOps/ZebraGateway/pkg/nacos"
@@ -137,8 +138,8 @@ func (m *Manager) RewritePath(path string) string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	for i := range m.routes {
-		if strings.HasPrefix(path, m.routes[i].Prefix) {
-			newPath := strings.TrimPrefix(path, m.routes[i].Prefix)
+		if after, ok := strings.CutPrefix(path, m.routes[i].Prefix); ok {
+			newPath := after
 			if m.routes[i].Rewrite != "" {
 				newPath = m.routes[i].Rewrite + newPath
 			}
@@ -199,6 +200,15 @@ func (m *Manager) ServeProxy(c *gin.Context) {
 
 	if matched == nil {
 		types.Error(c, http.StatusNotFound, 404, "路由不存在")
+		return
+	}
+
+	// WebSocket 升级请求：使用专用 WebSocket 代理桥接
+	// httputil.ReverseProxy 对 WebSocket 支持有限（hop-by-hop 头清理、路径双重改写等）
+	// 独立桥接更可靠，且保留原始消息帧类型
+	if middleware.IsWebSocketUpgrade(c) {
+		target := m.resolveTarget(matched)
+		middleware.ProxyWebSocket(c, matched, target, m.logger)
 		return
 	}
 
