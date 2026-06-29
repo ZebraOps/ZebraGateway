@@ -203,6 +203,7 @@ func main() {
 			"http://127.0.0.1:4120",
 			"http://localhost:4120",
 			"http://192.168.3.15:4120",
+			"https://*.trycloudflare.com",
 		},
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"},
